@@ -131,7 +131,6 @@ export default function CompressScreen() {
 
       setImageUri(uri);
       setCompressedUri(null);
-      await estimateCompression(uri, DEFAULT_QUALITY);
     }
   };
 
@@ -175,9 +174,13 @@ export default function CompressScreen() {
     return calculateSavings(originalSize, estimatedSize);
   };
 
-  const estimateCompression = async (uri: string, quality: number) => {
+  const estimateCompression = async (
+    uri: string,
+    quality: number,
+    fileSize: number,
+  ) => {
     if (!uri) return;
-    if (originalSize < 500 * 1024 && quality > 70) {
+    if (fileSize < 500 * 1024 && quality > 70) {
       setEstimatedSize(originalSize);
       return;
     }
@@ -202,7 +205,7 @@ export default function CompressScreen() {
 
       const size = await getFileSize(compressed.uri);
 
-      setEstimatedSize(Math.min(size, originalSize));
+      setEstimatedSize(Math.min(size, fileSize));
     } catch (err) {
       console.log(err);
     }
@@ -399,6 +402,12 @@ export default function CompressScreen() {
     }
   }, [previewImage]);
 
+  useEffect(() => {
+    if (imageUri && originalSize > 0 && compressionMode === "quality") {
+      estimateCompression(imageUri, compressionQuality, originalSize);
+    }
+  }, [imageUri, originalSize, compressionQuality]);
+
   return (
     <>
       <ScrollView className="flex-1 bg-white p-5" ref={scrollViewRef}>
@@ -495,10 +504,6 @@ export default function CompressScreen() {
                   value={compressionQuality}
                   onSlidingComplete={(value) => {
                     setCompressionQuality(value);
-
-                    if (imageUri) {
-                      estimateCompression(imageUri, value);
-                    }
                   }}
                 />
                 <View className="bg-blue-50 rounded-xl p-4 mt-4">
@@ -651,6 +656,8 @@ export default function CompressScreen() {
               <Text className="text-xl">✕</Text>
             </Pressable>
           </View>
+
+          <Text className="text-gray-500 mb-4">Drag down to close</Text>
 
           {previewImage && (
             <Image
